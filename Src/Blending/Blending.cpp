@@ -1,4 +1,4 @@
-// Blending.cpp : This file contains the 'main' function. Program execution begins and ends there.
+﻿// Blending.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
 
@@ -9,7 +9,7 @@
 #include <iostream>
 #include <d3dcompiler.h>
 #include "ShaderCompiler.h"
-#include "Windows.h"
+#include "WindowApp.h"
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 
@@ -564,7 +564,7 @@ public:
         m_Width = newWidth;
         m_Height = newHeight;
 
-        // Esperar GPU si est�s usando varios buffers
+        // Esperar GPU si estás usando varios buffers
         commandQueue->Signal(m_fence, ++m_fenceValue);
         WaitForPreviousFrame();
 

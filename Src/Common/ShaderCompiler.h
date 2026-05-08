@@ -1,11 +1,12 @@
 #pragma once
 
+#include <Windows.h>
 #include <dxcapi.h>
 #include <wrl/client.h>
 #include <string>
-#include <vector>
 
 using Microsoft::WRL::ComPtr;
+
 namespace Core
 {
 	class ShaderCompilerDXC
@@ -20,53 +21,61 @@ namespace Core
 
 		IDxcBlob* Compile(const std::wstring& shaderPath, const std::wstring& entryPoint, const std::wstring& targetProfile)
 		{
-		
-			IDxcBlobEncoding* source = nullptr;
-			utils->LoadFile(shaderPath.c_str(), nullptr, &source);
+			if (!compiler || !utils)
+				return nullptr;
 
-			
-			IDxcIncludeHandler* includeHandler = nullptr;
-			utils->CreateDefaultIncludeHandler(&includeHandler);
+			ComPtr<IDxcBlobEncoding> source;
+			HRESULT hr = utils->LoadFile(shaderPath.c_str(), nullptr, &source);
+			if (FAILED(hr) || !source)
+			{
+				OutputDebugStringW((L"DXC LoadFile failed: " + shaderPath + L"\n").c_str());
+				return nullptr;
+			}
 
-			// Argumentos básicos
+			ComPtr<IDxcIncludeHandler> includeHandler;
+			hr = utils->CreateDefaultIncludeHandler(&includeHandler);
+			if (FAILED(hr) || !includeHandler)
+				return nullptr;
+
 			LPCWSTR args[] =
 			{
 				shaderPath.c_str(),
 				L"-E", entryPoint.c_str(),
 				L"-T", targetProfile.c_str(),
-				L"-Zi", L"-Qembed_debug", // Debug info embebida
-				L"-Od" // not optimization
+				L"-Zi", L"-Qembed_debug",
+				L"-Od"
 			};
 
-
-			// Compilar
 			ComPtr<IDxcOperationResult> result;
-			HRESULT hr = compiler->Compile(
-				source,
+			hr = compiler->Compile(
+				source.Get(),
 				shaderPath.c_str(),
 				entryPoint.c_str(),
 				targetProfile.c_str(),
 				args, _countof(args),
 				nullptr, 0,
-				includeHandler,
+				includeHandler.Get(),
 				&result
 			);
+			if (FAILED(hr) || !result)
+				return nullptr;
 
-
-
-			HRESULT status;
-			result->GetStatus(&status);
-			if (FAILED(status))
+			HRESULT status = E_FAIL;
+			hr = result->GetStatus(&status);
+			if (FAILED(hr) || FAILED(status))
 			{
-				IDxcBlobEncoding* errors = nullptr;
-				result->GetErrorBuffer(&errors);
-				OutputDebugStringA((char*)errors->GetBufferPointer());
+				ComPtr<IDxcBlobEncoding> errors;
+				if (SUCCEEDED(result->GetErrorBuffer(&errors)) && errors)
+					OutputDebugStringA(reinterpret_cast<const char*>(errors->GetBufferPointer()));
 				return nullptr;
 			}
 
-			IDxcBlob* shaderBlob = nullptr;
-			result->GetResult((IDxcBlob**)&shaderBlob);
-			return shaderBlob;
+			ComPtr<IDxcBlob> shaderBlob;
+			hr = result->GetResult(&shaderBlob);
+			if (FAILED(hr) || !shaderBlob)
+				return nullptr;
+
+			return shaderBlob.Detach();
 		}
 
 	private:
@@ -74,6 +83,4 @@ namespace Core
 		IDxcLibrary* library = nullptr;
 		IDxcUtils* utils = nullptr;
 	};
-
-
 }

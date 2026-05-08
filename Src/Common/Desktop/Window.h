@@ -4,8 +4,8 @@
 #include <tchar.h>
 
 #include <functional>
-#include "../Dta/imgui.h"
-#include "../Dta/imgui_impl_win32.h"
+#include <imgui.h>
+#include <backends/imgui_impl_win32.h>
 
 
 
@@ -51,4 +51,3 @@ namespace Desktop
         const wchar_t* m_Title = L"DX12 App";
     };
 }
-

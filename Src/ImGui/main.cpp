@@ -1,4 +1,4 @@
-// ImGui.cpp : This file contains the 'main' function. Program execution begins and ends there.
+﻿// ImGui.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
 
@@ -11,9 +11,9 @@
 #include "Desktop/Window.h"
 #include "Graphics/DescriptorHeap.h"
 #include <DirectXMath.h>
-#include "Dta/imgui.h"
-#include "Dta/imgui_impl_win32.h"
-#include "Dta/imgui_impl_dx12.h"
+#include <imgui.h>
+#include <backends/imgui_impl_win32.h>
+#include <backends/imgui_impl_dx12.h>
 
 
 
@@ -647,7 +647,7 @@ public:
     float cube2RotationSpeed[3] = { 0.0f, 0.0f, 0.0f };
     float cube2Position[3] = { -0.2f, 0.0f, 0.0f };
 
-    // �ngulos acumulados
+    // Ángulos acumulados
     float cube1Angles[3] = { 0.0f, 0.0f, 0.0f };
     float cube2Angles[3] = { 0.0f, 0.0f, 0.0f };
 
@@ -910,3 +910,4 @@ int main()
 
     return 0;
 }
+

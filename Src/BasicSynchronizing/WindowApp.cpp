@@ -1,4 +1,4 @@
-#include "Windows.h"
+﻿#include "WindowApp.h"
 
 WindowApp::WindowApp(uint32_t width, uint32_t height, const wchar_t* title)
     : m_Width(width), m_Height(height), m_Title(title)
@@ -112,3 +112,5 @@ void WindowApp::HandleResize(UINT width, UINT height)
     if (onResize)
         onResize(width, height);
 }
+
+

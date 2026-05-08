@@ -10,7 +10,7 @@ namespace Graphics
 		// Create ImGui context
 
 		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
+		m_context = ImGui::CreateContext();
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::StyleColorsDark();
 
@@ -40,8 +40,10 @@ namespace Graphics
 	}
 	void GUI::Render(ID3D12GraphicsCommandList* cmd)
 	{
-		if(cmd)
-			ImGui::Render();
+		if (!cmd)
+			return;
+
+		ImGui::Render();
 
 
 
@@ -61,6 +63,9 @@ namespace Graphics
 
 	void GUI::Destroy()
 	{
+		ImGui_ImplDX12_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+
 		if (m_descriptorHeap.m_Heap)
 			m_descriptorHeap.Destroy();
 

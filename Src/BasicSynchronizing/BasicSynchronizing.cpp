@@ -1,4 +1,4 @@
-// BasicSynchronizing.cpp : This file contains the 'main' function. Program execution begins and ends there.
+﻿// BasicSynchronizing.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
 //#include <Windows.h>
@@ -8,7 +8,7 @@
 #include <iostream>
 #include <d3dcompiler.h>
 #include "ShaderCompiler.h"
-#include "Windows.h"
+#include "WindowApp.h"
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
 

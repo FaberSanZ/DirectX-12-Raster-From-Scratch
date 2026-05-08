@@ -268,6 +268,8 @@ public:
     float dimension = 0;
     uint32_t drawCallCount = 0;
 
+    bool vsync = false;
+
 
 
     bool Initialize(HWND hwnd, uint32_t width, uint32_t Heigh)
@@ -306,7 +308,7 @@ public:
         swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         swapChainDesc.SampleDesc.Count = 1;
-        swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
         IDXGISwapChain1* tempSwapChain = nullptr;
         factory->CreateSwapChainForHwnd(commandQueue, hwnd, &swapChainDesc, nullptr, nullptr, &tempSwapChain);
@@ -446,8 +448,8 @@ public:
 
     void CreatePipeline()
     {
-        auto vertexShaderBlob = shaderCompiler.Compile(L"../../Assets/Shaders/RootConstants/VertexShader.hlsl", L"VS", L"vs_6_0");
-        auto pixelShaderBlob = shaderCompiler.Compile(L"../../Assets/Shaders/RootConstants/PixelShader.hlsl", L"PS", L"ps_6_0");
+        auto vertexShaderBlob = shaderCompiler.Compile(L"../../../../Assets/Shaders/RootConstants/VertexShader.hlsl", L"VS", L"vs_6_0");
+        auto pixelShaderBlob = shaderCompiler.Compile(L"../../../../Assets/Shaders/RootConstants/PixelShader.hlsl", L"PS", L"ps_6_0");
 
 
 
@@ -773,6 +775,9 @@ public:
 		totaltriangles = 0;
 
         ImGui::NewLine();
+        ImGui::Checkbox("VSync", &vsync);
+        ImGui::NewLine();
+
 
 		// Sliders for camera position and rotation
 		ImGui::Text("x: %.2f,     y: %.2f,     z: %.2f", camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
@@ -930,7 +935,8 @@ public:
         commandQueue->ExecuteCommandLists(1, ppCommandLists);
 
         // Present the frame
-        swapChain->Present(1, 0);
+        vsync ? swapChain->Present(1, 0) : swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING);
+        
 
         // Signal and increment the fence value.
         // This will be used to synchronize the GPU and CPU.
