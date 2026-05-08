@@ -28,7 +28,7 @@ namespace Graphics
 
 		// Allocating SRV descriptors (for textures) is up to the application, so we provide callbacks.
 		// (current version of the backend will only allocate one descriptor, future versions will need to allocate more)
-		init_info.SrvDescriptorHeap = m_descriptorHeap.m_Heap;
+		init_info.SrvDescriptorHeap = m_descriptorHeap.heap;
 
 
 		init_info.LegacySingleSrvCpuDescriptor = m_descriptorHeap.GetCPUDescriptorHandleForHeapStart();
@@ -47,7 +47,7 @@ namespace Graphics
 
 
 
-		ID3D12DescriptorHeap* guiheaps[] = { m_descriptorHeap.m_Heap };
+		ID3D12DescriptorHeap* guiheaps[] = { m_descriptorHeap.heap };
 		cmd->SetDescriptorHeaps(_countof(guiheaps), guiheaps);
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmd);
 	}
@@ -66,7 +66,7 @@ namespace Graphics
 		ImGui_ImplDX12_Shutdown();
 		ImGui_ImplWin32_Shutdown();
 
-		if (m_descriptorHeap.m_Heap)
+		if (m_descriptorHeap.heap)
 			m_descriptorHeap.Destroy();
 
 		if (m_context)

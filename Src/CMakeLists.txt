@@ -16,6 +16,11 @@ function(add_dx12_example target_name)
 endfunction()
 
 set(DX12_EXAMPLES_WITH_COMMON
+    VertexBuffer
+    IndexBuffer
+    DepthTests
+    BasicSynchronizing
+    Blending
     ConstantBuffer
     BasicTexture
     RootConstants
@@ -32,6 +37,18 @@ add_dx12_example(Pipeline
         Pipeline/Pipeline.cpp
 )
 
+add_dx12_example(BasicSynchronizing
+    SOURCES
+        BasicSynchronizing/BasicSynchronizing.cpp
+        BasicSynchronizing/WindowApp.cpp
+)
+
+add_dx12_example(Blending
+    SOURCES
+        Blending/Blending.cpp
+        Blending/WindowApp.cpp
+)
+
 add_dx12_example(VertexBuffer
     SOURCES
         VertexBuffer/VertexBuffer.cpp
@@ -45,18 +62,6 @@ add_dx12_example(IndexBuffer
 add_dx12_example(DepthTests
     SOURCES
         DepthTests/DepthTests.cpp
-)
-
-add_dx12_example(BasicSynchronizing
-    SOURCES
-        BasicSynchronizing/BasicSynchronizing.cpp
-        BasicSynchronizing/WindowApp.cpp
-)
-
-add_dx12_example(Blending
-    SOURCES
-        Blending/Blending.cpp
-        Blending/WindowApp.cpp
 )
 
 add_dx12_example(ConstantBuffer

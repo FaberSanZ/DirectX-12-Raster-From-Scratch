@@ -20,6 +20,7 @@ target_link_libraries(Common
         dx12_sdk
         dxc_sdk
         ImGui
+        fastgltf::fastgltf
 )
 
 dx12_set_target_layout(Common "")

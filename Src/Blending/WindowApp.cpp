@@ -1,7 +1,7 @@
 ﻿#include "WindowApp.h"
 
 WindowApp::WindowApp(uint32_t width, uint32_t height, const wchar_t* title)
-    : m_Width(width), m_Height(height), m_Title(title)
+    : m_width(width), m_height(height), m_title(title)
 {
 }
 
@@ -16,11 +16,11 @@ bool WindowApp::Initialize(HINSTANCE hInstance)
     wc.lpszClassName = L"DX12WindowClass";
     RegisterClass(&wc);
 
-    RECT rect = { 0, 0, static_cast<LONG>(m_Width), static_cast<LONG>(m_Height) };
+    RECT rect = { 0, 0, static_cast<LONG>(m_width), static_cast<LONG>(m_height) };
     AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
 
     m_hWnd = CreateWindowEx(
-        0, wc.lpszClassName, m_Title,
+        0, wc.lpszClassName, m_title,
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT,
         rect.right - rect.left, rect.bottom - rect.top,
@@ -107,8 +107,8 @@ LRESULT CALLBACK WindowApp::WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARA
 
 void WindowApp::HandleResize(UINT width, UINT height)
 {
-    m_Width = width;
-    m_Height = height;
+    m_width = width;
+    m_height = height;
     if (onResize)
         onResize(width, height);
 }

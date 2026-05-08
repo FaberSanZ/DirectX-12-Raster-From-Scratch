@@ -12,8 +12,6 @@
 
 namespace Graphics
 {
-	class DescriptorHeap;
-
 	class GUI
 	{
 	public:

@@ -25,8 +25,8 @@ public:
     std::function<void(UINT, UINT)> onResize;
 
     HWND GetHWND() const { return m_hWnd; }
-    uint32_t GetWidth() const { return m_Width; }
-    uint32_t GetHeight() const { return m_Height; }
+    uint32_t GetWidth() const { return m_width; }
+    uint32_t GetHeight() const { return m_height; }
 
 private:
     static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -34,7 +34,7 @@ private:
 
     HWND m_hWnd = nullptr;
     HINSTANCE m_hInstance = nullptr;
-    uint32_t m_Width = 1280;
-    uint32_t m_Height = 720;
-    const wchar_t* m_Title = L"DX12 App";
+    uint32_t m_width = 1280;
+    uint32_t m_height = 720;
+    const wchar_t* m_title = L"DX12 App";
 };

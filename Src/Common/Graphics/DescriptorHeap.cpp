@@ -4,8 +4,6 @@
 
 namespace Graphics
 {
-
-
 	void DescriptorHeap::Initialize(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT numDescriptors, bool isShaderVisible)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
@@ -16,19 +14,16 @@ namespace Graphics
 		if (isShaderVisible)
 			heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
-		device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_Heap));
-		m_DescriptorSize = device->GetDescriptorHandleIncrementSize(type);
+		device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&heap));
+		descriptorSize = device->GetDescriptorHandleIncrementSize(type);
 	}
-
-
-
 
 	void DescriptorHeap::Destroy()
 	{
-		if (m_Heap)
+		if (heap)
 		{
-			m_Heap->Release();
-			m_Heap = nullptr;
+			heap->Release();
+			heap = nullptr;
 		}
 	}
 }
