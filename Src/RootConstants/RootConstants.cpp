@@ -27,65 +27,7 @@ using namespace DirectX;
 class Render
 {
 public:
-
-    class VertexBuffer
-    {
-    public:
-        VertexBuffer() = default;
-
-        ID3D12Resource* m_vertexBuffer = nullptr;
-        D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-
-        uint32_t stride = { };
-        uint32_t size = { };
-
-        void Destroy()
-        {
-            if (m_vertexBuffer)
-            {
-                m_vertexBuffer->Release();
-                m_vertexBuffer = nullptr;
-            }
-        }
-    } vertexBuffer;
-
-    class IndexBuffer
-    {
-    public:
-        IndexBuffer() = default;
-        ID3D12Resource* m_indexBuffer = nullptr;
-        D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-        uint32_t stride = { };
-        uint32_t size = { };
-        uint32_t m_indexCount { };
-
-        void Destroy()
-        {
-            if (m_indexBuffer)
-            {
-                m_indexBuffer->Release();
-                m_indexBuffer = nullptr;
-            }
-        }
-
-    } indexBuffer;
-
-    struct ConstantBuffer
-    {
-        ID3D12Resource* m_buffer = nullptr;
-        D3D12_CONSTANT_BUFFER_VIEW_DESC m_desc = { };
-        uint32_t m_size = 0;
-
-        void Destroy()
-        {
-            if (m_buffer)
-            {
-                m_buffer->Release();
-                m_buffer = nullptr;
-            }
-        }
-    } constBuffer;
-
+    Render() = default;
 
 
     struct CameraBuffer
@@ -100,8 +42,6 @@ public:
         float m_rotationX, m_rotationY, m_rotationZ;
 
         XMMATRIX m_viewMatrix;
-
-
 
         Camera()
         {
@@ -206,75 +146,9 @@ public:
     };
 
 
-public:
-    Render() = default;
-
-    uint32_t m_width { };
-    uint32_t m_height { };
-    uint32_t m_frameCount { 2 };
-
-    // Render m_device and resources
-    ID3D12Device* m_device = nullptr;
-    ID3D12CommandQueue* m_commandQueue = nullptr;
-    IDXGISwapChain3* m_swapChain = nullptr;
-    ID3D12Resource* m_renderTargets[2];
-    ID3D12CommandAllocator* m_commandAlloc = nullptr;
-    ID3D12GraphicsCommandList* m_commandList = nullptr;
-
-    // This is the memory for our depth buffer. it will also be used for a stencil buffer in a later tutorial
-    ID3D12Resource* m_depthStencilBuffer; 
-
-    // Pipeline state and root signature
-    ID3D12PipelineState* m_pipelineState = nullptr;
-    ID3D12RootSignature* m_rootSignature = nullptr;
-    ShaderCompilerByteCode m_shaderCompiler {};
-
-	// using m_viewport and scissor rect to define the area we will render to
-    D3D12_VIEWPORT m_viewport = { };
-    D3D12_RECT m_scissorRect = { };
-
-    // This is a heap for our render target view descriptor
-    DescriptorHeap m_rtvDescriptorHeap {}; 
-
-    // This is a heap for our depth/stencil buffer descriptor
-    DescriptorHeap m_dpvDescriptorHeap {};  
-
-
-
-    // Synchronization objects.
-    UINT m_frameIndex;
-    HANDLE m_fenceEvent;
-    ID3D12Fence* m_fence;
-    UINT64 m_fenceValue;
-
-    // m_gui object for ImGui integration
-    GUI m_gui;
-
-
-    // Camera
-    Camera camera {};
-    float SCREEN_DEPTH = 1000.0f;
-    float SCREEN_NEAR = 0.1f;
-
-
-    // Real draw-call stress sample.
-    // Not using instancing on purpose.
-    // 4k keeps the tutorial sane and easy to debug.
-    uint32_t OBJECT_INSTANCES = 256 * 16;
-    std::vector<DirectX::XMFLOAT3> rotationSpeeds;
-
-
-    float rotation = 0.0f;
-    float dimension = 0;
-    uint32_t drawCallCount = 0;
-
-    bool vsync = false;
-
-
-
     bool Initialize(HWND hwnd, uint32_t width, uint32_t Heigh)
     {
-        rotationSpeeds.resize(OBJECT_INSTANCES);
+        rotationSpeeds.resize(m_drawCallCount);
         InitializeRotationSpeeds();
 
 
@@ -289,7 +163,6 @@ public:
 
         IDXGIFactory4* factory = nullptr;
         CreateDXGIFactory1(IID_PPV_ARGS(&factory));
-
         D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_device));
 
 
@@ -332,8 +205,7 @@ public:
         CreateRenderTargetViews();
         CreateDepthBuffer();
         CreatePipeline();
-        CreateVertexBuffer();
-        CreateIndexBuffer();
+        CreateMesh();
         CreateConstantBuffer();
         CreateCamera();
         InitializeRotationSpeeds();
@@ -451,11 +323,16 @@ public:
         auto vertexShaderBlob = m_shaderCompiler.Compile(L"../../../../Assets/Shaders/RootConstants/VertexShader.hlsl", L"VS", L"vs_6_0");
         auto pixelShaderBlob = m_shaderCompiler.Compile(L"../../../../Assets/Shaders/RootConstants/PixelShader.hlsl", L"PS", L"ps_6_0");
 
+        D3D12_ROOT_PARAMETER bvRootParam = {};
+        bvRootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+        bvRootParam.Descriptor.ShaderRegister = 0; // t0
+        bvRootParam.Descriptor.RegisterSpace = 0;
+        bvRootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 
         D3D12_ROOT_PARAMETER cbvRootParam = {};
         cbvRootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-        cbvRootParam.Descriptor.ShaderRegister = 0; // b0
+        cbvRootParam.Descriptor.ShaderRegister = 1; // b2
         cbvRootParam.Descriptor.RegisterSpace = 0;
         cbvRootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
@@ -463,12 +340,12 @@ public:
         D3D12_ROOT_PARAMETER rootParam = {};
         rootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
         rootParam.Constants.Num32BitValues = 16;
-        rootParam.Constants.ShaderRegister = 1;                               // Register b1
+        rootParam.Constants.ShaderRegister = 2;                               // Register b2
         rootParam.Constants.RegisterSpace = 0;
         rootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
 
-        D3D12_ROOT_PARAMETER rootParams[] = { cbvRootParam, rootParam };
+        D3D12_ROOT_PARAMETER rootParams[] = { bvRootParam, cbvRootParam, rootParam };
 
         D3D12_ROOT_SIGNATURE_DESC rootSigDesc = {};
         rootSigDesc.NumParameters = _countof(rootParams);
@@ -486,13 +363,6 @@ public:
         D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errorBlob);
         m_device->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature));
 
-
-        // Define the vertex input layout.
-        D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-        {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-            { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-        };
 
 
         // Rasterizer state
@@ -532,8 +402,6 @@ public:
         psoDesc.pRootSignature = m_rootSignature;
         psoDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
         psoDesc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
-        psoDesc.InputLayout.NumElements = _countof(inputElementDescs);
-        psoDesc.InputLayout.pInputElementDescs = inputElementDescs;
         psoDesc.RasterizerState = rasterizerDesc;
         psoDesc.BlendState = blendDesc;
         psoDesc.DepthStencilState = depthStencilDesc;
@@ -547,7 +415,7 @@ public:
         m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState));
     }
 
-    void CreateVertexBuffer()
+    void CreateMesh()
     {
         // Define vertices for a triangle
         struct Vertex
@@ -595,48 +463,6 @@ public:
             {{-0.5f, -0.5f,  0.5f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
         };
 
-        vertexBuffer.size = sizeof(vertices);
-        vertexBuffer.stride = sizeof(Vertex);
-
-        // Create vertex buffer
-        D3D12_HEAP_PROPERTIES heapProps = {};
-        heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-        heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN; 
-        heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-        heapProps.CreationNodeMask = 1;
-        heapProps.VisibleNodeMask = 1;
-
-        D3D12_RESOURCE_DESC bufferDesc = {};
-        bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        bufferDesc.Width = vertexBuffer.size;
-        bufferDesc.Height = 1;
-        bufferDesc.DepthOrArraySize = 1;
-        bufferDesc.MipLevels = 1;
-        bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
-        bufferDesc.SampleDesc.Count = 1;
-        bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        bufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-
-        m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexBuffer.m_vertexBuffer));
-
-
-        // Copy vertex data to the vertex buffer
-        void* pData;
-        vertexBuffer.m_vertexBuffer->Map(0, nullptr, &pData);
-        memcpy(pData, vertices, sizeof(vertices));
-        vertexBuffer.m_vertexBuffer->Unmap(0, nullptr);
-
-
-        // Initialize the vertex buffer view.
-        vertexBuffer.m_vertexBufferView.BufferLocation = vertexBuffer.m_vertexBuffer->GetGPUVirtualAddress();
-        vertexBuffer.m_vertexBufferView.StrideInBytes = vertexBuffer.stride;
-        vertexBuffer.m_vertexBufferView.SizeInBytes = vertexBuffer.size;
-
-    }
-
-    void CreateIndexBuffer()
-    {
         // Define indices for a triangle
         uint32_t indices[] =
         {
@@ -665,78 +491,95 @@ public:
             20, 23, 21, // second triangle
         };
 
-        indexBuffer.size = sizeof(indices);
-        indexBuffer.stride = sizeof(uint32_t);
-        indexBuffer.m_indexCount = _countof(indices);
-
-        // Create index buffer
-        D3D12_HEAP_PROPERTIES heapProps = {};
-        heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-        heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-        heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-        heapProps.CreationNodeMask = 1;
-        heapProps.VisibleNodeMask = 1;
-
-        D3D12_RESOURCE_DESC bufferDesc = {};
-        bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        bufferDesc.Width = indexBuffer.size;
-        bufferDesc.Height = 1;
-        bufferDesc.DepthOrArraySize = 1;
-        bufferDesc.MipLevels = 1;
-        bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
-        bufferDesc.SampleDesc.Count = 1;
-        bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        bufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&indexBuffer.m_indexBuffer));
-
-
-        // Copy index data to the index buffer
-        void* pData;
-        indexBuffer.m_indexBuffer->Map(0, nullptr, &pData);
-        memcpy(pData, indices, sizeof(indices));
-        indexBuffer.m_indexBuffer->Unmap(0, nullptr);
-
+        m_vertexBuffer = CreateBuffer(vertices, sizeof(vertices), D3D12_RESOURCE_FLAG_NONE);
+        m_indexBuffer = CreateBuffer(indices, sizeof(indices), D3D12_RESOURCE_FLAG_NONE);
 
         // Initialize the index buffer view.
-        indexBuffer.m_indexBufferView.BufferLocation = indexBuffer.m_indexBuffer->GetGPUVirtualAddress();
-        indexBuffer.m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-        indexBuffer.m_indexBufferView.SizeInBytes = indexBuffer.size;
+        m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
+        m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+        m_indexBufferView.SizeInBytes = sizeof(indices);
+        m_indexCount = _countof(indices);
+
     }
+
+
+
 
     void CreateConstantBuffer()
     {
-        constBuffer.m_size = (sizeof(CameraBuffer) + 255) & ~255;
+        auto size = (sizeof(CameraBuffer) + 255) & ~255;
 
         // Create constant buffer
-        constBuffer.m_size = 256; // Size of the constant buffer in bytes
+        //size = 256; // Size of the constant buffer in bytes
+        //D3D12_HEAP_PROPERTIES heapProps = {};
+        //heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+        //heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        //heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        //heapProps.CreationNodeMask = 1;
+        //heapProps.VisibleNodeMask = 1;
+
+
+        //D3D12_RESOURCE_DESC bufferDesc = {};
+        //bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        //bufferDesc.Width = size;
+        //bufferDesc.Height = 1;
+        //bufferDesc.DepthOrArraySize = 1;
+        //bufferDesc.MipLevels = 1;
+        //bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
+        //bufferDesc.SampleDesc.Count = 1;
+        //bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        //bufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        //m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_constantBuffer));
+
+
+		m_constantBuffer = CreateBuffer(nullptr, size, D3D12_RESOURCE_FLAG_NONE);
+
+
+    }
+
+
+
+    ID3D12Resource* CreateBuffer(const void* data, uint32_t size, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE)
+    {
+        ID3D12Resource* buffer = nullptr;
+        // Create a committed resource for the buffer
         D3D12_HEAP_PROPERTIES heapProps = {};
         heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
         heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
         heapProps.CreationNodeMask = 1;
         heapProps.VisibleNodeMask = 1;
-
-
         D3D12_RESOURCE_DESC bufferDesc = {};
         bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        bufferDesc.Width = constBuffer.m_size;
+        bufferDesc.Alignment = 0;
+        bufferDesc.Width = size;
         bufferDesc.Height = 1;
         bufferDesc.DepthOrArraySize = 1;
         bufferDesc.MipLevels = 1;
         bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
         bufferDesc.SampleDesc.Count = 1;
+        bufferDesc.SampleDesc.Quality = 0;
         bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        bufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&constBuffer.m_buffer));
+        bufferDesc.Flags = flags;
+        m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&buffer));
 
-
+        // Copy data to the buffer
+        if (data)
+        {
+            void* mappedData = nullptr;
+            D3D12_RANGE readRange = { 0, 0 }; // We do not intend to read from this resource on the CPU.
+            buffer->Map(0, &readRange, &mappedData);
+            memcpy(mappedData, data, size);
+            buffer->Unmap(0, nullptr);
+        }
+        return buffer;
     }
 
     void CreateCamera()
     {
-        camera.SetPosition(0.0f, 0.0f, -5.0f);
-        camera.SetRotation(0.0f, 0.0f, 0.0f);
-        camera.Render();
+        m_camera.SetPosition(0.0f, 0.0f, -5.0f);
+        m_camera.SetRotation(0.0f, 0.0f, 0.0f);
+        m_camera.Render();
 
 
         // Setup the projection matrix.
@@ -744,64 +587,64 @@ public:
         float aspect = static_cast<float>(m_width) / static_cast<float>(m_height);
 
         // Create the projection matrix for 3D rendering.
-        cameraBuffer.projection = DirectX::XMMatrixTranspose(XMMatrixPerspectiveFovLH(fieldOfView, aspect, SCREEN_NEAR, SCREEN_DEPTH));
-        cameraBuffer.view = DirectX::XMMatrixTranspose(camera.GetViewMatrix());
+        cameraBuffer.projection = DirectX::XMMatrixTranspose(XMMatrixPerspectiveFovLH(fieldOfView, aspect, m_screenNear, m_screenDepth));
+        cameraBuffer.view = DirectX::XMMatrixTranspose(m_camera.GetViewMatrix());
     }
 
     void OnUpdate()
     {
-        camera.Render();
-        cameraBuffer.view = DirectX::XMMatrixTranspose(camera.GetViewMatrix());
+        m_camera.Render();
+        cameraBuffer.view = DirectX::XMMatrixTranspose(m_camera.GetViewMatrix());
 
 
         void* mappedData = nullptr;
-        constBuffer.m_buffer->Map(0, nullptr, &mappedData);
+        m_constantBuffer->Map(0, nullptr, &mappedData);
         memcpy(mappedData, &cameraBuffer, sizeof(CameraBuffer));
-        constBuffer.m_buffer->Unmap(0, nullptr);
+        m_constantBuffer->Unmap(0, nullptr);
     }
 
 
 
     void OnRenderGui()
     {
-        uint32_t totaltriangles = drawCallCount * (indexBuffer.m_indexCount / 3);
+        uint32_t totaltriangles = m_drawCall * (m_indexCount / 3);
         ImGui::Begin("Camera Control");
 		ImGui::Text("FPS: %.2f", ImGui::GetIO().Framerate);
 		ImGui::Text("Screen Size: %ux%u", m_width, m_height);
-        ImGui::Text("Draw Calls: %u", drawCallCount);
+        ImGui::Text("Draw Calls: %u", m_drawCall);
 		ImGui::Text("Total Triangles: %u", totaltriangles);
 
-        drawCallCount = 0;
+        m_drawCall = 0;
 		totaltriangles = 0;
 
         ImGui::NewLine();
-        ImGui::Checkbox("VSync", &vsync);
+        ImGui::Checkbox("VSync", &m_vSync);
         ImGui::NewLine();
 
 
 		// Sliders for camera position and rotation
-		ImGui::Text("x: %.2f,     y: %.2f,     z: %.2f", camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
-		ImGui::SliderFloat3("Camera Position", &camera.m_positionX, -30.0f, 30.0f);
+		ImGui::Text("x: %.2f,     y: %.2f,     z: %.2f", m_camera.GetPosition().x, m_camera.GetPosition().y, m_camera.GetPosition().z);
+		ImGui::SliderFloat3("Camera Position", &m_camera.m_positionX, -30.0f, 30.0f);
         ImGui::NewLine();
-        ImGui::Text("x: %.2f,     y: %.2f,     z: %.2f", camera.GetRotation().x, camera.GetRotation().y, camera.GetRotation().z);
-		ImGui::SliderFloat3("Camera Rotation", &camera.m_rotationX, -180.0f, 180.0f);
+        ImGui::Text("x: %.2f,     y: %.2f,     z: %.2f", m_camera.GetRotation().x, m_camera.GetRotation().y, m_camera.GetRotation().z);
+		ImGui::SliderFloat3("Camera Rotation", &m_camera.m_rotationX, -180.0f, 180.0f);
 
         ImGui::NewLine();
         // Slider for dimension
-		ImGui::Text("Dimension: %.2f", dimension);
-        ImGui::SliderFloat("Dimension", &dimension, -10.0f, 10.0f);
+		ImGui::Text("Dimension: %.2f", m_dimension);
+        ImGui::SliderFloat("Dimension", &m_dimension, -10.0f, 10.0f);
 
 		// Button to update camera
         if (ImGui::Button("Update Camera"))
         {
-            camera.SetPosition(0.0f, 0, -25.0f);
-			camera.SetRotation(0.0f, 0.0f, 0.0f);
+            m_camera.SetPosition(0.0f, 0, -25.0f);
+            m_camera.SetRotation(0.0f, 0.0f, 0.0f);
         }
 
 		// Button to reset rotation
         if (ImGui::Button("Reset"))
         {
-			rotation = 0.0f;
+			m_rotation = 0.0f;
         }
 
         ImGui::End();
@@ -814,7 +657,7 @@ public:
         std::mt19937 gen(rd());
         std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
-        for (int i = 0; i < OBJECT_INSTANCES; i++)
+        for (int i = 0; i < m_drawCallCount; i++)
         {
             rotationSpeeds[i] = { dist(gen), dist(gen), dist(gen) };
         }
@@ -823,10 +666,10 @@ public:
 	// Generate cubes in a grid pattern
     void GenerateCubes(ID3D12GraphicsCommandList* cmd)
     {
-        rotation += 0.02f;
+        m_rotation += 0.02f;
 
-        uint32_t dim = static_cast<uint32_t>(std::cbrt(OBJECT_INSTANCES)); // using cube root to determine the dimension of the grid
-        XMFLOAT3 offset = { dimension, dimension, dimension };
+        uint32_t dim = static_cast<uint32_t>(std::cbrt(m_drawCallCount)); // using cube root to determine the dimension of the grid
+        XMFLOAT3 offset = { m_dimension, m_dimension, m_dimension };
 
         float halfDimOffsetX = (dim * offset.x) / 2.0f;
         float halfDimOffsetY = (dim * offset.y) / 2.0f;
@@ -851,9 +694,9 @@ public:
 
                     XMFLOAT3 cubeRotation =
                     {
-                        rotation * rotationSpeeds[index].x,
-                        rotation * rotationSpeeds[index].y,
-                        rotation * rotationSpeeds[index].z
+                        m_rotation * rotationSpeeds[index].x,
+                        m_rotation * rotationSpeeds[index].y,
+                        m_rotation * rotationSpeeds[index].z
                     };
 
                     AddCube(cmd, position, cubeRotation);
@@ -869,9 +712,9 @@ public:
         XMMATRIX rot = XMMatrixRotationRollPitchYaw(rotation.x, rotation.y, rotation.z);
         XMMATRIX world = XMMatrixTranspose(rot * trans);
 
-        cmd->SetGraphicsRoot32BitConstants(1, 16, &world, 0);
-        cmd->DrawIndexedInstanced(indexBuffer.m_indexCount, 1, 0, 0, 0);
-        drawCallCount++;
+        cmd->SetGraphicsRoot32BitConstants(2, 16, &world, 0);
+        cmd->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
+        m_drawCall++;
     }
 
 
@@ -910,13 +753,11 @@ public:
         m_commandList->RSSetScissorRects(1, &m_scissorRect);
         m_commandList->SetGraphicsRootSignature(m_rootSignature);
         m_commandList->SetPipelineState(m_pipelineState);
-        m_commandList->IASetVertexBuffers(0, 1, &vertexBuffer.m_vertexBufferView);
-        m_commandList->IASetIndexBuffer(&indexBuffer.m_indexBufferView);
+        m_commandList->IASetIndexBuffer(&m_indexBufferView);
         m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        m_commandList->SetGraphicsRootConstantBufferView(0, constBuffer.m_buffer->GetGPUVirtualAddress());
+        m_commandList->SetGraphicsRootShaderResourceView(0, m_vertexBuffer->GetGPUVirtualAddress());
+        m_commandList->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
         GenerateCubes(m_commandList);
-
-
 
         // Start the Dear ImGui frame
         m_gui.NewFrame();
@@ -924,7 +765,6 @@ public:
         OnRenderGui();
         // Render ImGui
         m_gui.Render(m_commandList);
-
 
 
         // Close the command list
@@ -935,7 +775,7 @@ public:
         m_commandQueue->ExecuteCommandLists(1, ppCommandLists);
 
         // Present the frame
-        vsync ? m_swapChain->Present(1, 0) : m_swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING);
+        m_vSync ? m_swapChain->Present(1, 0) : m_swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING);
         
 
         // Signal and increment the fence value.
@@ -976,7 +816,7 @@ public:
         float aspect = static_cast<float>(m_width) / static_cast<float>(m_height);
 
         // Create the projection matrix for 3D rendering.
-        cameraBuffer.projection = DirectX::XMMatrixTranspose(XMMatrixPerspectiveFovLH(fieldOfView, aspect, SCREEN_NEAR, SCREEN_DEPTH));
+        cameraBuffer.projection = DirectX::XMMatrixTranspose(XMMatrixPerspectiveFovLH(fieldOfView, aspect, m_screenNear, m_screenDepth));
 
     }
 
@@ -987,11 +827,11 @@ public:
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
 
-        if (indexBuffer.m_indexBuffer)
-            indexBuffer.Destroy();
+        if (m_indexBuffer)
+            m_indexBuffer->Release();
 
-        if (vertexBuffer.m_vertexBuffer)
-            vertexBuffer.Destroy();
+        if(m_vertexBuffer)
+		    m_vertexBuffer->Release();
 
         if (m_depthStencilBuffer)
             m_depthStencilBuffer->Release();
@@ -1022,6 +862,85 @@ public:
         if (m_commandList)
             m_commandList->Release();
     }
+
+
+    private:
+
+
+        uint32_t m_width{ };
+        uint32_t m_height{ };
+        uint32_t m_frameCount{ 2 };
+
+        // Render m_device and resources
+        ID3D12Device* m_device = nullptr;
+        ID3D12CommandQueue* m_commandQueue = nullptr;
+        IDXGISwapChain3* m_swapChain = nullptr;
+        ID3D12Resource* m_renderTargets[2];
+        ID3D12CommandAllocator* m_commandAlloc = nullptr;
+        ID3D12GraphicsCommandList* m_commandList = nullptr;
+
+        // vertex pulling
+        ID3D12Resource* m_vertexBuffer = nullptr;
+
+        // index buffer and view
+        ID3D12Resource* m_indexBuffer = nullptr;
+        D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+        uint32_t m_indexCount{ };
+
+        // constant buffer
+        ID3D12Resource* m_constantBuffer = nullptr;
+
+
+        // This is the memory for our depth buffer. it will also be used for a stencil buffer in a later tutorial
+        ID3D12Resource* m_depthStencilBuffer;
+
+        // Pipeline state and root signature
+        ID3D12PipelineState* m_pipelineState = nullptr;
+        ID3D12RootSignature* m_rootSignature = nullptr;
+        ShaderCompilerByteCode m_shaderCompiler{};
+
+        // using m_viewport and scissor rect to define the area we will render to
+        D3D12_VIEWPORT m_viewport = { };
+        D3D12_RECT m_scissorRect = { };
+
+        // This is a heap for our render target view descriptor
+        DescriptorHeap m_rtvDescriptorHeap{};
+
+        // This is a heap for our depth/stencil buffer descriptor
+        DescriptorHeap m_dpvDescriptorHeap{};
+
+
+
+        // Synchronization objects.
+        UINT m_frameIndex;
+        HANDLE m_fenceEvent;
+        ID3D12Fence* m_fence;
+        UINT64 m_fenceValue;
+
+        // m_gui object for ImGui integration
+        GUI m_gui;
+
+
+        // Camera
+        Camera m_camera{};
+        float m_screenDepth = 1000.0f;
+        float m_screenNear = 0.1f;
+
+
+        // Real draw-call stress sample.
+        // Not using instancing on purpose.
+        // 4k keeps the tutorial sane and easy to debug.
+        uint32_t m_drawCallCount = 256 * 16;
+        std::vector<DirectX::XMFLOAT3> rotationSpeeds;
+
+
+        float m_rotation = 0.0f;
+        float m_dimension = 0;
+        uint32_t m_drawCall = 0;
+
+        bool m_vSync = false;
+
+
 };
 
 

@@ -176,8 +176,8 @@ public:
         m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
 		// Set the viewport and scissor rect
-        D3D12_VIEWPORT view = { 0, 0, m_width, m_height, 0.0f, 1.0f };
-		D3D12_RECT scissorRect = { 0, 0, m_width, m_height };
+        D3D12_VIEWPORT view = { 0, 0, static_cast<FLOAT>(m_width), static_cast<FLOAT>(m_height), 0.0f, 1.0f };
+		D3D12_RECT scissorRect = { 0, 0, static_cast<LONG>(m_width), static_cast<LONG>(m_height) };
 
         m_commandList->RSSetViewports(1, &view);
         m_commandList->RSSetScissorRects(1, &scissorRect);

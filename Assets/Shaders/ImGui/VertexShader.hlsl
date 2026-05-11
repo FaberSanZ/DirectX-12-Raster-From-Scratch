@@ -1,14 +1,16 @@
-cbuffer MatrrixBuffer
+struct Vertex
+{
+    float4 position;
+    float4 color;
+};
+
+StructuredBuffer<Vertex> Vertices : register(t0);
+
+cbuffer MatrrixBuffer : register(b0)
 {
     float4x4 World;
     float4x4 View;
     float4x4 Projection;
-};
-
-struct VertexInputType
-{
-    float4 position : POSITION;
-    float4 color : COLOR;
 };
 
 struct PixelInputType
@@ -17,21 +19,18 @@ struct PixelInputType
     float4 Color : COLOR;
 };
 
-
-
-PixelInputType VS(VertexInputType input)
+PixelInputType VS(uint vertexId : SV_VertexID)
 {
-    // Change the position vector to be 4 units for proper matrix calculations.
-    input.position.w = 1.0f; // Ensure w is set to 1 for proper transformation ?
-    
-    PixelInputType output;
+    Vertex input = Vertices[vertexId];
 
-    output.Pos = mul(input.position, World);
+    float4 position = input.position;
+    position.w = 1.0f;
+
+    PixelInputType output;
+    output.Pos = mul(position, World);
     output.Pos = mul(output.Pos, View);
     output.Pos = mul(output.Pos, Projection);
-    
     output.Color = input.color;
-
 
     return output;
 }

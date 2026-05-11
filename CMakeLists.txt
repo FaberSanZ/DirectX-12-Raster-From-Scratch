@@ -14,8 +14,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(DX12_PLATFORM_DIR "x64")
+    set(DX12_SDK_ARCH_DIR "x64")
 else()
     set(DX12_PLATFORM_DIR "Win32")
+    set(DX12_SDK_ARCH_DIR "x86")
 endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
@@ -24,12 +26,29 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 set(DX12_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(DX12_SRC_DIR "${DX12_ROOT_DIR}/Src")
-set(DX12_PACKAGES_DIR "${DX12_SRC_DIR}/packages")
 
-set(DXC_PACKAGE_DIR "${DX12_PACKAGES_DIR}/Microsoft.Direct3D.DXC.1.8.2505.32/build/native")
-set(DXC_INCLUDE_DIR "${DXC_PACKAGE_DIR}/include")
-set(DXC_LIB_DIR "${DXC_PACKAGE_DIR}/lib/${DX12_PLATFORM_DIR}")
-set(DXC_BIN_DIR "${DXC_PACKAGE_DIR}/bin/${DX12_PLATFORM_DIR}")
+set(WINDOWS_KITS_10_DIR "$ENV{ProgramFiles\(x86\)}/Windows Kits/10")
+
+if(NOT CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
+    file(GLOB DX12_WINDOWS_SDK_INCLUDE_DIRS LIST_DIRECTORIES true "${WINDOWS_KITS_10_DIR}/Include/10.*")
+    list(SORT DX12_WINDOWS_SDK_INCLUDE_DIRS)
+    list(GET DX12_WINDOWS_SDK_INCLUDE_DIRS -1 DX12_LATEST_WINDOWS_SDK_INCLUDE_DIR)
+    get_filename_component(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "${DX12_LATEST_WINDOWS_SDK_INCLUDE_DIR}" NAME)
+endif()
+
+set(DX12_WINDOWS_SDK_VERSION "${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")
+set(DX12_WINDOWS_SDK_INCLUDE_UM "${WINDOWS_KITS_10_DIR}/Include/${DX12_WINDOWS_SDK_VERSION}/um")
+set(DX12_WINDOWS_SDK_LIB_UM "${WINDOWS_KITS_10_DIR}/Lib/${DX12_WINDOWS_SDK_VERSION}/um/${DX12_SDK_ARCH_DIR}")
+set(DX12_WINDOWS_SDK_BIN "${WINDOWS_KITS_10_DIR}/bin/${DX12_WINDOWS_SDK_VERSION}/${DX12_SDK_ARCH_DIR}")
+
+find_path(DXC_INCLUDE_DIR dxcapi.h PATHS "${DX12_WINDOWS_SDK_INCLUDE_UM}" NO_DEFAULT_PATH)
+find_library(DXC_LIB dxcompiler PATHS "${DX12_WINDOWS_SDK_LIB_UM}" NO_DEFAULT_PATH)
+find_file(DXC_COMPILER_DLL dxcompiler.dll PATHS "${DX12_WINDOWS_SDK_BIN}" NO_DEFAULT_PATH)
+find_file(DXC_DXIL_DLL dxil.dll PATHS "${DX12_WINDOWS_SDK_BIN}" NO_DEFAULT_PATH)
+
+if(NOT DXC_INCLUDE_DIR OR NOT DXC_LIB)
+    message(FATAL_ERROR "DXC was not found in the Windows SDK. Install a Windows 10/11 SDK that includes dxcapi.h and dxcompiler.lib.")
+endif()
 
 add_library(dx12_sdk INTERFACE)
 target_compile_definitions(dx12_sdk INTERFACE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
@@ -37,8 +56,7 @@ target_link_libraries(dx12_sdk INTERFACE d3d12 dxgi d3dcompiler)
 
 add_library(dxc_sdk INTERFACE)
 target_include_directories(dxc_sdk INTERFACE "${DXC_INCLUDE_DIR}")
-target_link_directories(dxc_sdk INTERFACE "${DXC_LIB_DIR}")
-target_link_libraries(dxc_sdk INTERFACE dxcompiler)
+target_link_libraries(dxc_sdk INTERFACE "${DXC_LIB}")
 
 function(dx12_set_target_layout target folder_name)
     set_target_properties(${target} PROPERTIES
@@ -53,13 +71,13 @@ function(dx12_set_target_layout target folder_name)
 endfunction()
 
 function(dx12_link_dxc_runtime target)
-    if(EXISTS "${DXC_BIN_DIR}/dxcompiler.dll")
+    if(DXC_COMPILER_DLL AND DXC_DXIL_DLL)
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${DXC_BIN_DIR}/dxcompiler.dll"
+                "${DXC_COMPILER_DLL}"
                 "$<TARGET_FILE_DIR:${target}>"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${DXC_BIN_DIR}/dxil.dll"
+                "${DXC_DXIL_DLL}"
                 "$<TARGET_FILE_DIR:${target}>"
             VERBATIM
         )

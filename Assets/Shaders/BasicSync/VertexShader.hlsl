@@ -1,8 +1,10 @@
-struct VertexInputType
+struct Vertex
 {
-    float4 position : POSITION;
-    float4 color : COLOR;
+    float4 position;
+    float4 color;
 };
+
+StructuredBuffer<Vertex> Vertices : register(t0);
 
 struct PixelInputType
 {
@@ -10,10 +12,9 @@ struct PixelInputType
     float4 Color : COLOR;
 };
 
-
-
-PixelInputType VS(VertexInputType input)
+PixelInputType VS(uint vertexId : SV_VertexID)
 {
+    Vertex input = Vertices[vertexId];
     PixelInputType output;
 
     output.Pos = input.position;
