@@ -146,10 +146,8 @@ public:
     };
 
 
-    bool Initialize(HWND hwnd, uint32_t width, uint32_t Heigh)
+    void Initialize(HWND hwnd, uint32_t width, uint32_t Heigh)
     {
-        rotationSpeeds.resize(m_drawCallCount);
-        InitializeRotationSpeeds();
 
 
 		// Set screen width and height
@@ -206,11 +204,17 @@ public:
         CreateDepthBuffer();
         CreatePipeline();
         CreateMesh();
-        CreateConstantBuffer();
         CreateCamera();
-        InitializeRotationSpeeds();
 
-        return true;
+
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+
+		m_rotationSpeeds.resize(m_drawCallCount);
+        for (int i = 0; i < m_drawCallCount; i++)
+            m_rotationSpeeds[i] = { dist(gen), dist(gen), dist(gen) };
+
     }
 
     void CreateSynchronizationObjects()
@@ -500,39 +504,8 @@ public:
         m_indexBufferView.SizeInBytes = sizeof(indices);
         m_indexCount = _countof(indices);
 
-    }
 
-
-
-
-    void CreateConstantBuffer()
-    {
-        auto size = (sizeof(CameraBuffer) + 255) & ~255;
-
-        // Create constant buffer
-        //size = 256; // Size of the constant buffer in bytes
-        //D3D12_HEAP_PROPERTIES heapProps = {};
-        //heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-        //heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-        //heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-        //heapProps.CreationNodeMask = 1;
-        //heapProps.VisibleNodeMask = 1;
-
-
-        //D3D12_RESOURCE_DESC bufferDesc = {};
-        //bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-        //bufferDesc.Width = size;
-        //bufferDesc.Height = 1;
-        //bufferDesc.DepthOrArraySize = 1;
-        //bufferDesc.MipLevels = 1;
-        //bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
-        //bufferDesc.SampleDesc.Count = 1;
-        //bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        //bufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        //m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&m_constantBuffer));
-
-
-		m_constantBuffer = CreateBuffer(nullptr, size, D3D12_RESOURCE_FLAG_NONE);
+        m_constantBuffer = CreateBuffer(nullptr, (sizeof(CameraBuffer) + 255) & ~255, D3D12_RESOURCE_FLAG_NONE);
 
 
     }
@@ -651,18 +624,6 @@ public:
     }
 
 
-    void InitializeRotationSpeeds()
-    {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
-
-        for (int i = 0; i < m_drawCallCount; i++)
-        {
-            rotationSpeeds[i] = { dist(gen), dist(gen), dist(gen) };
-        }
-    }
-
 	// Generate cubes in a grid pattern
     void GenerateCubes(ID3D12GraphicsCommandList* cmd)
     {
@@ -694,9 +655,9 @@ public:
 
                     XMFLOAT3 cubeRotation =
                     {
-                        m_rotation * rotationSpeeds[index].x,
-                        m_rotation * rotationSpeeds[index].y,
-                        m_rotation * rotationSpeeds[index].z
+                        m_rotation * m_rotationSpeeds[index].x,
+                        m_rotation * m_rotationSpeeds[index].y,
+                        m_rotation * m_rotationSpeeds[index].z
                     };
 
                     AddCube(cmd, position, cubeRotation);
@@ -864,81 +825,79 @@ public:
     }
 
 
-    private:
+private:
 
 
-        uint32_t m_width{ };
-        uint32_t m_height{ };
-        uint32_t m_frameCount{ 2 };
+    uint32_t m_width{ };
+    uint32_t m_height{ };
+    uint32_t m_frameCount{ 2 };
 
-        // Render m_device and resources
-        ID3D12Device* m_device = nullptr;
-        ID3D12CommandQueue* m_commandQueue = nullptr;
-        IDXGISwapChain3* m_swapChain = nullptr;
-        ID3D12Resource* m_renderTargets[2];
-        ID3D12CommandAllocator* m_commandAlloc = nullptr;
-        ID3D12GraphicsCommandList* m_commandList = nullptr;
+    // Render m_device and resources
+    ID3D12Device* m_device = nullptr;
+    ID3D12CommandQueue* m_commandQueue = nullptr;
+    IDXGISwapChain3* m_swapChain = nullptr;
+    ID3D12Resource* m_renderTargets[2];
+    ID3D12CommandAllocator* m_commandAlloc = nullptr;
+    ID3D12GraphicsCommandList* m_commandList = nullptr;
 
-        // vertex pulling
-        ID3D12Resource* m_vertexBuffer = nullptr;
+    // vertex pulling
+    ID3D12Resource* m_vertexBuffer = nullptr;
 
-        // index buffer and view
-        ID3D12Resource* m_indexBuffer = nullptr;
-        D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-        uint32_t m_indexCount{ };
+    // index buffer and view
+    ID3D12Resource* m_indexBuffer = nullptr;
+    D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+    uint32_t m_indexCount{ };
 
-        // constant buffer
-        ID3D12Resource* m_constantBuffer = nullptr;
+    // constant buffer
+    ID3D12Resource* m_constantBuffer = nullptr;
 
 
-        // This is the memory for our depth buffer. it will also be used for a stencil buffer in a later tutorial
-        ID3D12Resource* m_depthStencilBuffer;
+    // This is the memory for our depth buffer. it will also be used for a stencil buffer in a later tutorial
+    ID3D12Resource* m_depthStencilBuffer;
 
         // Pipeline state and root signature
-        ID3D12PipelineState* m_pipelineState = nullptr;
-        ID3D12RootSignature* m_rootSignature = nullptr;
-        ShaderCompilerByteCode m_shaderCompiler{};
+    ID3D12PipelineState* m_pipelineState = nullptr;
+    ID3D12RootSignature* m_rootSignature = nullptr;
+    ShaderCompilerByteCode m_shaderCompiler{};
 
-        // using m_viewport and scissor rect to define the area we will render to
-        D3D12_VIEWPORT m_viewport = { };
-        D3D12_RECT m_scissorRect = { };
+    // using m_viewport and scissor rect to define the area we will render to
+    D3D12_VIEWPORT m_viewport = { };
+    D3D12_RECT m_scissorRect = { };
 
-        // This is a heap for our render target view descriptor
-        DescriptorHeap m_rtvDescriptorHeap{};
+    // This is a heap for our render target view descriptor
+    DescriptorHeap m_rtvDescriptorHeap{};
 
-        // This is a heap for our depth/stencil buffer descriptor
-        DescriptorHeap m_dpvDescriptorHeap{};
+    // This is a heap for our depth/stencil buffer descriptor
+    DescriptorHeap m_dpvDescriptorHeap{};
 
+    // Synchronization objects.
+    UINT m_frameIndex;
+    HANDLE m_fenceEvent;
+    ID3D12Fence* m_fence;
+    UINT64 m_fenceValue;
 
-
-        // Synchronization objects.
-        UINT m_frameIndex;
-        HANDLE m_fenceEvent;
-        ID3D12Fence* m_fence;
-        UINT64 m_fenceValue;
-
-        // m_gui object for ImGui integration
-        GUI m_gui;
+    // m_gui object for ImGui integration
+    GUI m_gui;
 
 
-        // Camera
-        Camera m_camera{};
-        float m_screenDepth = 1000.0f;
-        float m_screenNear = 0.1f;
+    // Camera
+    Camera m_camera{};
+    float m_screenDepth = 1000.0f;
+    float m_screenNear = 0.1f;
 
 
-        // Real draw-call stress sample.
-        // Not using instancing on purpose.
-        // 4k keeps the tutorial sane and easy to debug.
-        uint32_t m_drawCallCount = 256 * 16;
-        std::vector<DirectX::XMFLOAT3> rotationSpeeds;
+    // Real draw-call stress sample.
+    // Not using instancing on purpose.
+    // 4k keeps the tutorial sane and easy to debug.
+    uint32_t m_drawCallCount = 256 * 16;
+    std::vector<DirectX::XMFLOAT3> m_rotationSpeeds;
 
 
-        float m_rotation = 0.0f;
-        float m_dimension = 0;
-        uint32_t m_drawCall = 0;
+    float m_rotation = 0.0f;
+    float m_dimension = 0;
+    uint32_t m_drawCall = 0;
 
-        bool m_vSync = false;
+    bool m_vSync = false;
 
 
 };

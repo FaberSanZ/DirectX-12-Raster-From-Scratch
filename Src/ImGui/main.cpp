@@ -94,9 +94,6 @@ public:
         CreateDepthBuffer();
         CreatePipeline();
         CreateMesh();
-        CreateConstantBuffer();
-
-
 
 
 		// Create ImGui context
@@ -397,7 +394,7 @@ public:
             {{ 0.5f, -0.5f, -0.5f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}},
             {{-0.5f, -0.5f,  0.5f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
         };
-        m_vertexBuffer = CreateBuffer(vertices, sizeof(vertices));
+
         // Define indices for a trie
         uint32_t indices[] =
         {
@@ -425,24 +422,24 @@ public:
             20, 21, 22, // first triangle
             20, 23, 21, // second triangle
         };
-        m_indexCount = _countof(indices);
+
+
+        m_vertexBuffer = CreateBuffer(vertices, sizeof(vertices));
         m_indexBuffer = CreateBuffer(indices, sizeof(indices));
+        m_indexCount = _countof(indices);
 
 
         m_indexBufferView.BufferLocation = m_indexBuffer->GetGPUVirtualAddress();
         m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
         m_indexBufferView.SizeInBytes = sizeof(indices);
-    }
 
-
-    void CreateConstantBuffer()
-    {
         m_constantBufferSize = (sizeof(CameraBuffer) + 255) & ~255;
         m_constantBuffer = CreateBuffer(nullptr, m_constantBufferSize);
         m_constantBuffer2 = CreateBuffer(nullptr, m_constantBufferSize);
 
         CreateCamera();
     }
+
 
     void CreateCamera()
     {
@@ -537,9 +534,6 @@ public:
     }
 
 
-
-
-
     void OnRender()
     {
         // get the current back buffer index
@@ -572,17 +566,13 @@ public:
         m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
 
-
         m_commandList->SetGraphicsRootSignature(m_rootSignature);
-
         m_commandList->SetPipelineState(m_pipelineState);
         m_commandList->IASetIndexBuffer(&m_indexBufferView);
         m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
         m_commandList->SetGraphicsRootShaderResourceView(0, m_vertexBuffer->GetGPUVirtualAddress());
         m_commandList->SetGraphicsRootConstantBufferView(1, m_constantBuffer->GetGPUVirtualAddress());
         m_commandList->DrawIndexedInstanced(m_indexCount, 1, 0, 0, 0);
-
 
 
 
@@ -600,6 +590,7 @@ public:
         ImGui_ImplDX12_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
+
         OnRenderGui();
         // Render ImGui
         ImGui::Render();
@@ -623,9 +614,6 @@ public:
         // This will be used to synchronize the GPU and CPU.
         WaitForPreviousFrame();
     }
-
-
-
 
 
     void OnResize(uint32_t newWidth, uint32_t newHeight)
@@ -735,8 +723,7 @@ private:
     DescriptorHeap m_rtvDescriptorHeap {};  // This is a heap for our render target view descriptor
     DescriptorHeap m_dpvDescriptorHeap {};  // This is a heap for our depth/stencil buffer descriptor
 	DescriptorHeap m_guiDescriptorHeap {}; // This is a heap for our ImGui descriptor heap
-
-
+    como 
 
     // Synchronization objects.
     UINT m_frameIndex;
@@ -745,11 +732,6 @@ private:
     UINT64 m_fenceValue;
 
 };
-
-
-
-
-
 
 
 int main()
@@ -761,25 +743,9 @@ int main()
     render.Initialize(win.GetHWND(), win.GetWidth(), win.GetHeight());
 
 
-    win.SetOnUpdate([&render]
-        {
-        });
-
-
-
-
-    win.SetOnRender([&render]
-        {
-            render.OnUpdate();
-            render.OnRender();
-        });
-
-
-    win.SetOnResize([&render](UINT w, UINT h)
-        {
-            render.OnResize(w, h);
-        });
-
+    win.SetOnUpdate([&render] {render.OnUpdate(); });
+    win.SetOnRender([&render] { render.OnRender(); });
+    win.SetOnResize([&render](UINT w, UINT h) { render.OnResize(w, h); });
 
     win.Run();
 

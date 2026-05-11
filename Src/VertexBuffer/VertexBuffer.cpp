@@ -20,21 +20,14 @@ class Render
 public:
     Render() = default;
 
-
-
-
-
-    bool Initialize(HWND hwnd, uint32_t width, uint32_t Heigh)
+    void Initialize(HWND hwnd, uint32_t width, uint32_t Heigh)
     {
         m_width = width;
         m_height = Heigh;
         IDXGIFactory4* factory = nullptr;
+
         CreateDXGIFactory1(IID_PPV_ARGS(&factory));
-
         D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
-
-
-
 
         D3D12_COMMAND_QUEUE_DESC queueDesc = {};
         queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
@@ -60,8 +53,6 @@ public:
         factory->Release();
 
 
-
-
         // Create RTV descriptor heap
         m_rtvDescriptorHeap.Initialize(m_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_frameCount, false);
 
@@ -76,17 +67,13 @@ public:
             m_renderTargets[i] = backBuffer;
         }
 
-
         m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAlloc));
         m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAlloc, nullptr, IID_PPV_ARGS(&m_commandList));
 
         m_commandList->Close();
 
-
         CreatePipeline();
         CreateMesh();
-
-        return true;
     }
 
 
@@ -113,12 +100,6 @@ public:
         D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errorBlob);
         m_device->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature));
 
-        // --- PIPELINE STATE ---
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-        psoDesc.pRootSignature = m_rootSignature;
-
-        psoDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
-        psoDesc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
 
         // Rasterizer state manual
         D3D12_RASTERIZER_DESC rasterizerDesc = {};
@@ -126,7 +107,6 @@ public:
         rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
         rasterizerDesc.FrontCounterClockwise = FALSE;
         rasterizerDesc.DepthClipEnable = TRUE;
-        psoDesc.RasterizerState = rasterizerDesc;
 
         // Blend state manual
         D3D12_BLEND_DESC blendDesc = {};
@@ -134,13 +114,17 @@ public:
         blendDesc.IndependentBlendEnable = FALSE;
         blendDesc.RenderTarget[0].BlendEnable = FALSE;
         blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-        psoDesc.BlendState = blendDesc;
 
-        // Depth stencil
+
+        // --- PIPELINE STATE ---
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+        psoDesc.pRootSignature = m_rootSignature;
+        psoDesc.VS = { vertexShaderBlob->GetBufferPointer(), vertexShaderBlob->GetBufferSize() };
+        psoDesc.PS = { pixelShaderBlob->GetBufferPointer(), pixelShaderBlob->GetBufferSize() };
+        psoDesc.RasterizerState = rasterizerDesc;
+        psoDesc.BlendState = blendDesc;
         psoDesc.DepthStencilState.DepthEnable = FALSE;
         psoDesc.DepthStencilState.StencilEnable = FALSE;
-
-
         psoDesc.SampleMask = UINT_MAX;
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         psoDesc.NumRenderTargets = 1;
@@ -171,6 +155,7 @@ public:
             { -0.5f, -0.5f, 0.0f,1.0f,  // POSITION
                 0.0f, 0.0f, 0.9f, 1.0f, }      // COLOR
         };
+
         m_vertexBuffer = CreateBuffer(vertices, sizeof(vertices));
 }
 
@@ -197,11 +182,16 @@ public:
         ID3D12Resource* buffer = nullptr;
         m_device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&buffer));
 
-        void* mappedData = nullptr;
-        D3D12_RANGE readRange = { 0, 0 };
-        buffer->Map(0, &readRange, &mappedData);
-        memcpy(mappedData, data, size);
-        buffer->Unmap(0, nullptr);
+
+        if (data)
+        {
+            void* mappedData = nullptr;
+            D3D12_RANGE readRange = { 0, 0 };
+            buffer->Map(0, &readRange, &mappedData);
+            memcpy(mappedData, data, size);
+            buffer->Unmap(0, nullptr);
+        }
+
         return buffer;
     }
 
@@ -213,7 +203,6 @@ public:
         // Reset the command allocator and command list for the current frame
         m_commandAlloc->Reset();
         m_commandList->Reset(m_commandAlloc, nullptr);
-
 
 
         // Set the render target view (RTV) for the current back bufferq
@@ -258,7 +247,6 @@ public:
         }
 
 
-
         for (uint32_t i = 0; i < 2; ++i)
             if (m_renderTargets[i])
                 m_renderTargets[i]->Release();
@@ -284,24 +272,24 @@ public:
 
 private:
     uint32_t m_width { };
-        uint32_t m_height { };
-        uint32_t m_frameCount { 2 };
+    uint32_t m_height { };
+    uint32_t m_frameCount { 2 };
 
-        // Render m_device and resources
-        ID3D12Device* m_device = nullptr;
-        ID3D12CommandQueue* m_commandQueue = nullptr;
-        IDXGISwapChain3* m_swapChain = nullptr;
-        ID3D12Resource* m_renderTargets[2];
-        ID3D12CommandAllocator* m_commandAlloc = nullptr;
-        ID3D12GraphicsCommandList* m_commandList = nullptr;
+    // Render m_device and resources
+    ID3D12Device* m_device = nullptr;
+    ID3D12CommandQueue* m_commandQueue = nullptr;
+    IDXGISwapChain3* m_swapChain = nullptr;
+    ID3D12Resource* m_renderTargets[2];
+    ID3D12CommandAllocator* m_commandAlloc = nullptr;
+    ID3D12GraphicsCommandList* m_commandList = nullptr;
 
-        // Pipeline state and root signature
-        ID3D12PipelineState* m_pipelineState = nullptr;
-        ID3D12RootSignature* m_rootSignature = nullptr;
-        ShaderCompilerByteCode m_shaderCompiler {};
+    // Pipeline state and root signature
+    ID3D12PipelineState* m_pipelineState = nullptr;
+    ID3D12RootSignature* m_rootSignature = nullptr;
+    ShaderCompilerByteCode m_shaderCompiler {};
 
-        DescriptorHeap m_rtvDescriptorHeap {};
-        ID3D12Resource* m_vertexBuffer = nullptr;
+    DescriptorHeap m_rtvDescriptorHeap {};
+    ID3D12Resource* m_vertexBuffer = nullptr;
 };
 
 int main()
@@ -321,11 +309,8 @@ int main()
 
     ShowWindow(hWnd, SW_SHOW);
 
-    if (!render.Initialize(hWnd, width, height))
-    {
-        std::cerr << "Error DirectX 12" << std::endl;
-        return 1;
-    }
+    render.Initialize(hWnd, width, height);
+
 
     MSG msg = { 0 };
     while (msg.message != WM_QUIT)
