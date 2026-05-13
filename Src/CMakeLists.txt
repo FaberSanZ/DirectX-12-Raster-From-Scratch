@@ -23,61 +23,31 @@ set(DX12_EXAMPLES_WITH_COMMON
     Blending
     ConstantBuffer
     BasicTexture
-    RootConstants
+    Instancing
     ImGuiExample
 )
 
-add_dx12_example(ClearScreen
-    SOURCES
-        ClearScreen/ClearScreen.cpp
-)
+add_dx12_example(ClearScreen SOURCES ClearScreen/ClearScreen.cpp)
 
-add_dx12_example(Pipeline
-    SOURCES
-        Pipeline/Pipeline.cpp
-)
+add_dx12_example(Pipeline SOURCES Pipeline/Pipeline.cpp)
 
-add_dx12_example(BasicSynchronizing
-    SOURCES
-        BasicSynchronizing/BasicSynchronizing.cpp
-        BasicSynchronizing/WindowApp.cpp
-)
+add_dx12_example(RootConstants SOURCES RootConstants/RootConstants.cpp)
 
-add_dx12_example(Blending
-    SOURCES
-        Blending/Blending.cpp
-        Blending/WindowApp.cpp
-)
+add_dx12_example(BasicSynchronizing SOURCES BasicSynchronizing/BasicSynchronizing.cpp BasicSynchronizing/WindowApp.cpp)
 
-add_dx12_example(VertexBuffer
-    SOURCES
-        VertexBuffer/VertexBuffer.cpp
-)
+add_dx12_example(Blending SOURCES Blending/Blending.cpp Blending/WindowApp.cpp)
 
-add_dx12_example(IndexBuffer
-    SOURCES
-        IndexBuffer/IndexBuffer.cpp
-)
+add_dx12_example(VertexBuffer SOURCES VertexBuffer/VertexBuffer.cpp)
 
-add_dx12_example(DepthTests
-    SOURCES
-        DepthTests/DepthTests.cpp
-)
+add_dx12_example(IndexBuffer SOURCES IndexBuffer/IndexBuffer.cpp)
 
-add_dx12_example(ConstantBuffer
-    SOURCES
-        ConstantBuffer/ConstantBuffer.cpp
-)
+add_dx12_example(DepthTests SOURCES DepthTests/DepthTests.cpp)
 
-add_dx12_example(BasicTexture
-    SOURCES
-        BasicTexture/main.cpp
-)
+add_dx12_example(ConstantBuffer SOURCES ConstantBuffer/ConstantBuffer.cpp)
 
-add_dx12_example(RootConstants
-    SOURCES
-        RootConstants/RootConstants.cpp
-)
+add_dx12_example(BasicTexture SOURCES BasicTexture/main.cpp)
+
+add_dx12_example(Instancing SOURCES Instancing/Instancing.cpp)
 
 add_dx12_example(ImGuiExample
     SOURCE_DIR "ImGui"

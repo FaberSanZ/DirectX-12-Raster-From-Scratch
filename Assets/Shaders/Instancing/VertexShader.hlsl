@@ -4,18 +4,15 @@ struct Vertex
     float4 color;
 };
 
-StructuredBuffer<Vertex> Vertices : register(t0);
+StructuredBuffer<Vertex> Vertices : register(t1);
 
-cbuffer MatrixBuffer : register(b1)
+cbuffer MatrixBuffer : register(b2)
 {
     float4x4 View;
     float4x4 Projection;
 };
 
-cbuffer RootConstant : register(b2)
-{
-    float4x4 World;
-};
+StructuredBuffer<float4x4> Instances : register(t3);
 
 struct PixelInputType
 {
@@ -23,16 +20,17 @@ struct PixelInputType
     float4 Color : COLOR;
 };
 
-PixelInputType VS(uint vertexId : SV_VertexID)
+PixelInputType VS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
     Vertex vertex = Vertices[vertexId];
+    float4x4 world = Instances[instanceId];
 
     PixelInputType output;
 
     float4 pos = vertex.position;
     pos.w = 1.0f;
 
-    output.Pos = mul(pos, World);
+    output.Pos = mul(pos, world);
     output.Pos = mul(output.Pos, View);
     output.Pos = mul(output.Pos, Projection);
 

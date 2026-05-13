@@ -65,23 +65,18 @@ public:
             ID3D12Resource* backBuffer = nullptr;
             m_swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer));
 
-
             D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = GetDescriptorCpuHandle(m_rtvDescriptorHeap, i);
             m_device->CreateRenderTargetView(backBuffer, nullptr, rtvHandle);
 
             m_renderTargets[i] = backBuffer;
         }
 
-
         m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAlloc));
         m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAlloc, nullptr, IID_PPV_ARGS(&m_commandList));
-
         m_commandList->Close();
 
         return true;
     }
-
-
 
     void Loop()
     {
@@ -92,8 +87,6 @@ public:
         m_commandAlloc->Reset();
         m_commandList->Reset(m_commandAlloc, nullptr);
 
-
-
         // Set the render target view (RTV) for the current back bufferq
         D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = GetDescriptorCpuHandle(m_rtvDescriptorHeap, backBufferIndex);
         m_commandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
@@ -101,7 +94,6 @@ public:
         // Clear the render target
         float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
         m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-
 
         m_commandList->Close();
 
@@ -137,7 +129,7 @@ public:
             m_commandList->Release();
     }
 
-    private:
+
         void InitializeDescriptorHeap(DescriptorHeap& heap, D3D12_DESCRIPTOR_HEAP_TYPE type, UINT numDescriptors)
         {
             D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
@@ -165,53 +157,40 @@ public:
             }
         }
 
-        uint32_t m_width{ };
-        uint32_t m_height{ };
-        uint32_t m_frameCount{ 2 };
+
+private:
+    uint32_t m_width{ };
+    uint32_t m_height{ };
+    uint32_t m_frameCount{ 2 };
 
 
-        // Render device and resources
-        ID3D12Device* m_device = nullptr;
-        ID3D12CommandQueue* m_commandQueue = nullptr;
-        IDXGISwapChain3* m_swapChain = nullptr;
-        ID3D12Resource* m_renderTargets[2] {};
-        ID3D12CommandAllocator* m_commandAlloc = nullptr;
-        ID3D12GraphicsCommandList* m_commandList = nullptr;
-        DescriptorHeap m_rtvDescriptorHeap {};
+    // Render device and resources
+    ID3D12Device* m_device = nullptr;
+    ID3D12CommandQueue* m_commandQueue = nullptr;
+    IDXGISwapChain3* m_swapChain = nullptr;
+    ID3D12Resource* m_renderTargets[2]{};
+    ID3D12CommandAllocator* m_commandAlloc = nullptr;
+    ID3D12GraphicsCommandList* m_commandList = nullptr;
+    DescriptorHeap m_rtvDescriptorHeap{};
 
 };
 
 int main()
 {
-	uint32_t width = 1280;
-	uint32_t height = 820;
-    const wchar_t title[] = L"DX12 ClearScreen";
+    uint32_t width = 1280;
+    uint32_t height = 820;
+    const wchar_t title[] = L"DX12 Clear Screen";
 
-    RenderSystem render {};
+    RenderSystem render{};
 
+    WNDCLASSEX wcex = { sizeof(WNDCLASSEX), CS_CLASSDC, DefWindowProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, title, nullptr };
+    RegisterClassEx(&wcex);
 
+    // Create a window
+    HWND hWnd = CreateWindow(title, title, WS_OVERLAPPEDWINDOW, 100, 100, width, height, nullptr, nullptr, wcex.hInstance, nullptr);
+    ShowWindow(hWnd, SW_SHOW);
 
-    WNDCLASS wc = { };
-    wc.lpfnWndProc = [](HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) -> LRESULT
-    {
-        if (msg == WM_DESTROY)
-            PostQuitMessage(0);
-
-        return DefWindowProc(hwnd, msg, wparam, lparam);
-    };
-
-    wc.lpszClassName = title;
-    wc.hInstance = GetModuleHandle(NULL);
-    RegisterClass(&wc);
-    HWND hwnd = CreateWindow(title, title, WS_OVERLAPPEDWINDOW, 100, 100, width, height, NULL, NULL, wc.hInstance, NULL);
-    ShowWindow(hwnd, SW_SHOW);
-
-
-    if (!render.Initialize(hwnd, width, height))
-    {
-        std::cerr << "Error DirectX 12" << std::endl;
-        return 1;
-    }
+    render.Initialize(hWnd, width, height);
 
     MSG msg = { 0 };
     while (msg.message != WM_QUIT)
@@ -227,8 +206,6 @@ int main()
         }
     }
 
-
-	render.Cleanup();
-
+    render.Cleanup();
     return 0;
 }
