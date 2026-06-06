@@ -18,6 +18,7 @@ Example | Details
 ---------|--------
 <img src="Screenshots/ClearScreen.png" width=380> | [Clear Screen](Src/ClearScreen)<br> This sample shows how to initialize DirectX 12, select a GPU (adapter), create a device, a command queue, a swap chain, a render target view (RTV) descriptor heap, and a command list to clear the screen to a solid color. All rendering commands are recorded into the command list, then executed through the command queue. 
 <img src="Screenshots/Pipeline.png" width=380> | [Pipeline](Src/Pipeline)<br> We will start drawing geometry onto the screen in this tutorial. We will learn more about Pipeline (PSOs [ID3D12PipelineState])
+<img src="Screenshots/RootConstants.png" width=380> | [RootConstants](Src/RootConstants)<br>Uses SetGraphicsRoot32BitConstants, small blocks of uniform data stored within a command list, to pass data to a shader without the need for uniform buffers.
 <img src="Screenshots/VertexBuffer.png" width=380> | [VertexBuffer](Src/VertexBuffer)<br> Let's get some color in our scene. In this tutorial we will add color to our vertices to color our triangle. This involves updating the vertex shader to pass the color to the pixel shader, the pixel shader to output the color passed to it, the vertex structure to add a color attribute.
 <img src="Screenshots/IndexBuffer.png" width=380> | [IndexBuffer](Src/IndexBuffer)<br> In this tutorial we will learn how to use indices to define our triangles. This is useful because we can remove duplicate vertices, as many times the same vertex is used in multiple triangles.
 <img src="Screenshots/DepthTests.png" width=380> | [DepthTests](Src/DepthTests)<br> We will create a depth/stencil buffer, then create a depth/stencil view which we bind to the OM stage of the pipeline
@@ -25,7 +26,7 @@ Example | Details
 <img src="Screenshots/Blending.png" width=380> | [Blending](Src/Blending)<br> Here we will learn about a technique called "blending"! This will give us the ability to render "transparent" primitives.
 <img src="Screenshots/ConstantBuffer.png" width=380> | [ConstantBuffer](Src/ConstantBuffer)<br> In this sample, we will learn about matrices, transformations, world/view/projection space matrices, and constant buffers
 <img src="Screenshots/ImGui.png" width=380> | [ImGui](Src/ImGui)<br>This sample shows how to use ImGui with DirectX 12 to control two 3D cubes.
-<img src="Screenshots/RootConstants.png" width=380> | [RootConstants](Src/RootConstants)<br>Uses SetGraphicsRoot32BitConstants, small blocks of uniform data stored within a command list, to pass data to a shader without the need for uniform buffers.
+<img src="Screenshots/Instancing.png" width=380> | [Instancing](Src/Instancing)<br> Use the instantiation function to render multiple instances of the same mesh, using a StructuredBuffer and the SV_InstanceID to use a single draw call
 
 
 
