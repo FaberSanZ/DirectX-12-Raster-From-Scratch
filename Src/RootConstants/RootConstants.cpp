@@ -116,10 +116,10 @@ public:
 
         D3D12_ROOT_PARAMETER pixelConstantRootParam = {};
         pixelConstantRootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-        pixelConstantRootParam.Constants.Num32BitValues = 4;
+        pixelConstantRootParam.Constants.Num32BitValues = 5;
         pixelConstantRootParam.Constants.ShaderRegister = 0; // b0
         pixelConstantRootParam.Constants.RegisterSpace = 0;
-        pixelConstantRootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+        pixelConstantRootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 
 
@@ -208,8 +208,8 @@ public:
         m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 
-        float triangleColor[] = { 0.1f, 0.7f, 0.1f, 1.0f };
-        m_commandList->SetGraphicsRoot32BitConstants(0, 4, &triangleColor, 0);
+        float rootConstantData[] = { 0.0f, 0.7f, 0.0f, 1.0f, 0.5f };
+        m_commandList->SetGraphicsRoot32BitConstants(0, 5, &rootConstantData, 0);
         m_commandList->DrawInstanced(3, 1, 0, 0);
 
 		// Close the command list to prepare it for execution
