@@ -1,4 +1,4 @@
-﻿// Pipeline.cpp : This file contains the 'main' function. Program execution begins and ends there.
+﻿// RootConstants.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 #include <Windows.h>
 #include <d3d12.h>
@@ -109,13 +109,30 @@ public:
 
     void CreatePipeline()
     {
-        auto vertexShaderBlob = m_shaderCompiler.Compile(L"../../../../Assets/Shaders/Pipeline/VertexShader.hlsl", L"VS", L"vs_6_0");
-        auto pixelShaderBlob = m_shaderCompiler.Compile(L"../../../../Assets/Shaders/Pipeline/PixelShader.hlsl", L"PS", L"ps_6_0");
+        auto vertexShaderBlob = m_shaderCompiler.Compile(L"../../../../Assets/Shaders/RootConstants/VertexShader.hlsl", L"VS", L"vs_6_0");
+        auto pixelShaderBlob = m_shaderCompiler.Compile(L"../../../../Assets/Shaders/RootConstants/PixelShader.hlsl", L"PS", L"ps_6_0");
 
+
+
+        D3D12_ROOT_PARAMETER pixelConstantRootParam = {};
+        pixelConstantRootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+        pixelConstantRootParam.Constants.Num32BitValues = 4;
+        pixelConstantRootParam.Constants.ShaderRegister = 0; // b0
+        pixelConstantRootParam.Constants.RegisterSpace = 0;
+        pixelConstantRootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+
+
+        D3D12_ROOT_PARAMETER rootParams[] =
+        {
+            pixelConstantRootParam,
+        };
 
         D3D12_ROOT_SIGNATURE_DESC rootSigDesc = {};
-        rootSigDesc.NumParameters = 0;
-        rootSigDesc.pParameters = nullptr;
+        rootSigDesc.NumParameters = _countof(rootParams);
+        rootSigDesc.pParameters = rootParams;
+        rootSigDesc.NumStaticSamplers = 0;
+        rootSigDesc.pStaticSamplers = nullptr;
         rootSigDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
         ID3DBlob* sigBlob = nullptr;
@@ -171,6 +188,9 @@ public:
         D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = GetDescriptorCpuHandle(&m_rtvHeap, backBufferIndex);
         m_commandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
 
+
+
+
         // Clear the render target
         float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
         m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
@@ -184,7 +204,12 @@ public:
 
 		// draw the triangle
         m_commandList->SetPipelineState(m_pipeline);
+        m_commandList->SetGraphicsRootSignature(m_rootSignature);
         m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+
+        float triangleColor[] = { 0.1f, 0.7f, 0.1f, 1.0f };
+        m_commandList->SetGraphicsRoot32BitConstants(0, 4, &triangleColor, 0);
         m_commandList->DrawInstanced(3, 1, 0, 0);
 
 		// Close the command list to prepare it for execution
@@ -248,7 +273,7 @@ int main()
 {
     uint32_t width = 1280;
     uint32_t height = 820;
-    const wchar_t title[] = L"DX12 Pipeline";
+    const wchar_t title[] = L"DX12 RootConstants";
 
     RenderSystem render {};
 

@@ -914,7 +914,7 @@ private:
     // Real draw-call stress sample.
     // Not using instancing on purpose.
     // 4k keeps the tutorial sane and easy to debug.
-    uint32_t m_drawCallCount = 256 * 256 * 8;
+    uint32_t m_drawCallCount = 8 * 8 * 8;
     std::vector<DirectX::XMFLOAT3> m_rotationSpeeds;
 	std::vector<XMMATRIX> m_instanceData;
 
